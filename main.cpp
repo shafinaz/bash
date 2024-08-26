@@ -10,7 +10,7 @@ using std::cout;
 using std::istringstream;
 using std::string;
 
-/*void handleCD(const std::vector<std::string>& tokens)
+void handleCD(const std::vector<std::string>& tokens)
 {
     if (tokens.size() != 2)
     {
@@ -21,9 +21,9 @@ using std::string;
     const char* path = tokens[1].c_str();
     if (chdir(path) != 0)
     {
-        std::cerr << "Error: " << strerror(errno) << "\n";
+        std::cerr << "Error: Failed to change directory. \n";
     }
-}*/
+}
 
 bool quoteInputs(const string& input, std::vector<std::string>& tokens)
 {
@@ -141,50 +141,56 @@ int main()
         if(!tokens.empty())
         {
             string command = tokens[0];
-            
-            std::vector<char*> arguments;
 
-            for (auto& tkn : tokens)
+            if(command == "cd")
             {
-                arguments.push_back(&tkn[0]);
-            }
-            arguments.push_back(nullptr);
-
-            pid_t pid = fork();
-
-            if (pid < 0) {
-                std::cerr << "Error : Fork failed. \n";
-            }
-            else if (pid == 0)
-            {
-                /* Child process */
-                execvp(command.c_str(), arguments.data());
-
-                std::cerr << "Error : Command execution failed. \n";
-                exit(EXIT_FAILURE);
+                handleCD(tokens);
             }
             else
             {
-                /* Parent process */
-                int status;
-                waitpid(pid, &status, 0);
+                std::vector<char*> arguments;
 
-                if(WIFEXITED(status))
+                for (auto& tkn : tokens)
                 {
-                    int exitCode = WEXITSTATUS(status);
-                    if(exitCode != 0)
-                    {
-                        std::cerr << "Command exited with code " << exitCode << std::endl;
-                    }
+                    arguments.push_back(&tkn[0]);
+                }
+                arguments.push_back(nullptr);
+
+                pid_t pid = fork();
+
+                if (pid < 0) {
+                    std::cerr << "Error : Fork failed. \n";
+                }
+                else if (pid == 0)
+                {
+                    /* Child process */
+                    execvp(command.c_str(), arguments.data());
+
+                    std::cerr << "Error : Command execution failed. \n";
+                    exit(EXIT_FAILURE);
 
                 }
-                else if (WIFSIGNALED(status))
-                {
-                    int signalNumber = WTERMSIG(status);
-                    std::cerr << "Command terminated by signal " << signalNumber << std::endl;
+                else{
+                    /* Parent process */
+                    int status;
+                    waitpid(pid, &status, 0);
+
+                    if(WIFEXITED(status))
+                    {
+                        int exitCode = WEXITSTATUS(status);
+                        if(exitCode != 0)
+                        {
+                            std::cerr << "Command exited with code " << exitCode << std::endl;
+                        }
+
+                    }   
+                    else if (WIFSIGNALED(status))
+                    {
+                        int signalNumber = WTERMSIG(status);
+                        std::cerr << "Command terminated by signal " << signalNumber << std::endl;
+                    }
                 }
             }
-
         }
         cout << std::endl;
 
